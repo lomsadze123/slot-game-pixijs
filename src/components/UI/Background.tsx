@@ -2,11 +2,6 @@ import { Container, Graphics, Sprite } from "@pixi/react";
 import { Graphics as PixiGraphicsType, Texture } from "pixi.js";
 import { useCallback, useEffect, useState } from "react";
 
-interface BackgroundProps {
-  width: number;
-  height: number;
-}
-
 const createGradientTexture = (width: number, height: number): Texture => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -26,7 +21,7 @@ const createGradientTexture = (width: number, height: number): Texture => {
   return Texture.from(canvas);
 };
 
-const Background = ({ width, height }: BackgroundProps) => {
+const Background = ({ width, height }: Size) => {
   const [stars, setStars] = useState<Star[]>([]);
   const [bgTexture, setBgTexture] = useState<Texture>(Texture.EMPTY);
 
