@@ -61,11 +61,7 @@ const BalanceDisplay = ({
 
   return (
     <Container position={[x, y]}>
-      <Text
-        text={`BALANCE: ${balance}`}
-        anchor={[0, 0.5]}
-        style={balanceStyle}
-      />
+      <Text text={`BALANCE: ${balance}`} anchor={0.5} style={balanceStyle} />
 
       {lastWin > 0 && !isSpinning && (
         <Text

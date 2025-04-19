@@ -1,6 +1,6 @@
 import { Container, Graphics } from "@pixi/react";
 import { Graphics as GraphicTypes } from "pixi.js";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import Symbol from "./Symbol";
 
 const Reel = ({
@@ -14,6 +14,8 @@ const Reel = ({
 }: ReelSymbolContainer) => {
   // Track vertical offset for spinning animation
   const [offset, setOffset] = useState(0);
+  // Reference for the mask
+  const maskRef = useRef<GraphicTypes>(null);
 
   // Simple spinning animation using useEffect
   useEffect(() => {
@@ -43,6 +45,17 @@ const Reel = ({
     };
   }, [isSpinning, height, symbolCount]);
 
+  // Create mask for the reel to prevent overflow
+  const drawMask = useCallback(
+    (g: GraphicTypes) => {
+      g.clear();
+      g.beginFill(0xffffff);
+      g.drawRect(0, 0, width, height);
+      g.endFill();
+    },
+    [width, height]
+  );
+
   const drawReelBackground = useCallback(
     (g: GraphicTypes) => {
       g.clear();
@@ -58,7 +71,12 @@ const Reel = ({
   return (
     <Container position={[x, y]}>
       <Graphics draw={drawReelBackground} />
-      <Container y={isSpinning ? offset : 0}>
+
+      {/* Create a mask */}
+      <Graphics draw={drawMask} ref={maskRef} />
+
+      {/* Apply the mask to the symbols container */}
+      <Container y={isSpinning ? offset : 0} mask={maskRef.current}>
         {symbols.map((symbolType, index) => (
           <Symbol
             key={`symbol-${index}`}

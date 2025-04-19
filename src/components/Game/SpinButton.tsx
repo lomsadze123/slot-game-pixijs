@@ -3,16 +3,16 @@ import { TextStyle } from "pixi.js";
 import { useCallback } from "react";
 import { Graphics as GraphicTypes } from "pixi.js";
 
-interface SpinButtonProps extends Size {
+interface SpinButtonProps extends Position {
   handleSpin: () => void;
   disabled?: boolean;
 }
 
 const SpinButton = ({
-  width,
-  height,
   handleSpin,
   disabled = false,
+  x,
+  y,
 }: SpinButtonProps) => {
   const drawSpinButton = useCallback(
     (g: GraphicTypes) => {
@@ -27,7 +27,7 @@ const SpinButton = ({
 
   return (
     <Container
-      position={[width * 0.5, height * 0.85]}
+      position={[x, y]}
       eventMode={disabled ? "none" : "static"}
       pointerdown={disabled ? undefined : handleSpin}
       alpha={disabled ? 0.7 : 1}

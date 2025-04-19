@@ -38,11 +38,21 @@ const GameScene = ({ width, height }: Size) => {
     }
   }, []);
 
+  // Define layout dimensions
+  const slotMachineWidth = width * 0.6;
+  const slotMachineHeight = height * 0.6;
+
   // Calculate positions based on container size
   const slotMachinePosition = {
-    x: width * 0.5,
+    x: width * 0.37,
     y: height * 0.5,
   };
+
+  // Position UI elements on the right
+  const rightPanelX = width * 0.85; // Center of right 30% of screen
+  const balanceY = height * 0.3;
+  const betControlsY = height * 0.5;
+  const spinButtonY = height * 0.7;
 
   return (
     <Container>
@@ -50,22 +60,22 @@ const GameScene = ({ width, height }: Size) => {
         ref={slotMachineRef}
         x={slotMachinePosition.x}
         y={slotMachinePosition.y}
-        width={width * 0.7}
-        height={height * 0.6}
+        width={slotMachineWidth}
+        height={slotMachineHeight}
         onStateUpdate={setGameState}
       />
 
       <BalanceDisplay
-        x={width * 0.2}
-        y={height * 0.8}
+        x={rightPanelX}
+        y={balanceY}
         balance={gameState.balance}
         lastWin={gameState.lastWin}
         isSpinning={gameState.isSpinning}
       />
 
       <BetControls
-        x={width * 0.8}
-        y={height * 0.8}
+        x={rightPanelX}
+        y={betControlsY}
         betAmount={gameState.betAmount}
         onChangeBet={handleBetChange}
         disabled={gameState.isSpinning}
@@ -73,11 +83,11 @@ const GameScene = ({ width, height }: Size) => {
 
       <SpinButton
         handleSpin={handleSpin}
-        width={width}
-        height={height}
         disabled={
           gameState.isSpinning || gameState.balance < gameState.betAmount
         }
+        x={rightPanelX}
+        y={spinButtonY}
       />
     </Container>
   );

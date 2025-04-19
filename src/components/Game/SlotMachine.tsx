@@ -66,7 +66,7 @@ const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
       (g: GraphicsType) => {
         g.clear();
         g.beginFill(0x000000, 0.6);
-        g.drawRoundedRect(-width / 2, -height / 2, width, height, 16);
+        g.drawRoundedRect(-width / 2, -height / 2, width, height + 20, 16);
         g.endFill();
       },
       [width, height]
@@ -77,8 +77,8 @@ const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
         <Graphics draw={drawBackground} />
 
         <ReelSet
-          x={-width / 2 + cellWidth / 2}
-          y={-height / 2 + cellHeight / 2}
+          x={-width / 2 + cellWidth / 20}
+          y={-height / 2 + cellHeight / 20}
           columns={columns}
           rows={rows}
           cellWidth={cellWidth}
