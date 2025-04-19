@@ -1,17 +1,22 @@
-import { Container, Graphics, Text } from "@pixi/react";
+import { Container, Graphics } from "@pixi/react";
 import {
   useCallback,
   useState,
   useRef,
   forwardRef,
   useImperativeHandle,
+  useEffect,
 } from "react";
-import { TextStyle, Graphics as GraphicsType } from "pixi.js";
+import { Graphics as GraphicsType } from "pixi.js";
 import ReelSet from "./ReelSet";
 import SlotMachineController from "../../controllers/SlotMachineController";
 
-const SlotMachine = forwardRef<SlotMachineRef, Dimension>(
-  ({ x, y, width, height }, ref) => {
+interface SlotMachineProps extends Dimension {
+  onStateUpdate?: (state: SlotMachineState) => void;
+}
+
+const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
+  ({ x, y, width, height, onStateUpdate }, ref) => {
     const columns = 5;
     const rows = 3;
 
@@ -19,27 +24,38 @@ const SlotMachine = forwardRef<SlotMachineRef, Dimension>(
     const [gameState, setGameState] = useState(
       controllerRef.current.getState()
     );
-    const [isSpinning, setIsSpinning] = useState(false);
+
+    // When state changes, call the onStateUpdate callback
+    useEffect(() => {
+      if (onStateUpdate) {
+        onStateUpdate(gameState);
+      }
+    }, [gameState, onStateUpdate]);
 
     // Expose spin method to parent
     useImperativeHandle(ref, () => ({
       spin: async () => {
-        if (isSpinning) return Promise.reject("Already spinning");
+        if (gameState.isSpinning) return Promise.reject("Already spinning");
 
-        setIsSpinning(true);
+        setGameState((prev) => ({ ...prev, isSpinning: true }));
+
         return controllerRef.current
           .spin()
           .then((result) => {
-            setGameState(controllerRef.current.getState());
-            setIsSpinning(false);
+            const newState = controllerRef.current.getState();
+            setGameState(newState);
             return result;
           })
           .catch((error) => {
-            setIsSpinning(false);
+            setGameState((prev) => ({ ...prev, isSpinning: false }));
             throw error;
           });
       },
       getState: () => gameState,
+      setBet: (amount: number) => {
+        controllerRef.current.setBet(amount);
+        setGameState(controllerRef.current.getState());
+      },
     }));
 
     // Calculate dimensions for each cell in the grid
@@ -67,28 +83,9 @@ const SlotMachine = forwardRef<SlotMachineRef, Dimension>(
           rows={rows}
           cellWidth={cellWidth}
           cellHeight={cellHeight}
-          isSpinning={isSpinning}
+          isSpinning={gameState.isSpinning}
           reelPositions={gameState.reelPositions}
         />
-
-        {/* Display win amount when applicable */}
-        {gameState.lastWin > 0 && !isSpinning && (
-          <Text
-            text={`WIN: ${gameState.lastWin}`}
-            anchor={0.5}
-            position={[0, height / 2 + 40]}
-            style={
-              new TextStyle({
-                fill: 0xffdd00,
-                fontSize: 32,
-                fontWeight: "bold",
-                dropShadow: true,
-                dropShadowColor: 0x000000,
-                dropShadowDistance: 4,
-              })
-            }
-          />
-        )}
       </Container>
     );
   }

@@ -1,5 +1,4 @@
-import { Container, Text } from "@pixi/react";
-import { TextStyle } from "pixi.js";
+import { Container } from "@pixi/react";
 import Reel from "./Reel";
 
 const ReelSet = ({
@@ -28,14 +27,6 @@ const ReelSet = ({
             symbols={reelPositions[index]}
           />
         ))}
-
-      {/* Display balance and bet */}
-      <Text
-        text="Balance: 1000"
-        x={0}
-        y={rows * cellHeight + 100}
-        style={new TextStyle({ fill: 0xffffff, fontSize: 24 })}
-      />
     </Container>
   );
 };
