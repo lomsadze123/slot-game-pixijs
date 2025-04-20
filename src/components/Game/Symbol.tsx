@@ -1,33 +1,54 @@
-import { Container, Graphics, Text } from "@pixi/react";
-import { useCallback } from "react";
-import { TextStyle, Graphics as GraphicTypes } from "pixi.js";
+import { Container, Sprite } from "@pixi/react";
+import { useEffect, useState } from "react";
+import { Assets } from "pixi.js";
+import { BG_ASSETS, SYMBOL_ASSETS } from "../../constants/pixiAssets";
 
-// Placeholder until we have actual symbol assets
 const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
-  const colors = [
-    0xff3e4d, 0x2bd9fe, 0x7ed321, 0xffff00, 0xc86edf, 0xff3e4d, 0x2bd9fe,
-  ];
+  const [symbolLoaded, setSymbolLoaded] = useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
 
-  const drawSymbol = useCallback(
-    (g: GraphicTypes) => {
-      g.clear();
-      g.beginFill(colors[symbolType % colors.length]);
-      g.drawRoundedRect(-width / 2, -height / 2, width, height, 8);
-      g.endFill();
-    },
-    [width, height, symbolType, colors]
-  );
+  const safeSymbolType = symbolType % SYMBOL_ASSETS.length;
+  const symbolPath = SYMBOL_ASSETS[safeSymbolType];
+  const bgPath = BG_ASSETS[safeSymbolType];
 
-  const textStyle = new TextStyle({
-    fill: 0xffffff,
-    fontSize: 24,
-    fontWeight: "bold",
-  });
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        await Assets.load(symbolPath);
+        setSymbolLoaded(true);
+
+        await Assets.load(bgPath);
+        setBgLoaded(true);
+      } catch (err) {
+        console.error(
+          `Failed to load assets for symbol ${safeSymbolType}`,
+          err
+        );
+      }
+    };
+
+    loadAssets();
+  }, [symbolPath, bgPath, safeSymbolType]);
+
+  if (!symbolLoaded || !bgLoaded) {
+    return null;
+  }
 
   return (
     <Container position={[x, y]}>
-      <Graphics draw={drawSymbol} />
-      <Text text={`${symbolType}`} anchor={0.5} style={textStyle} />
+      <Sprite
+        texture={Assets.get(bgPath)}
+        anchor={0.5}
+        width={width * 2}
+        height={height * 1.1}
+      />
+
+      <Sprite
+        texture={Assets.get(symbolPath)}
+        anchor={0.5}
+        width={width}
+        height={height}
+      />
     </Container>
   );
 };

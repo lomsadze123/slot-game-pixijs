@@ -84,13 +84,19 @@ const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
     // Calculate dimensions for each cell in the grid
     const cellWidth = width / columns;
     const cellHeight = height / rows;
-
     const drawBackground = useCallback(
       (g: GraphicsType) => {
         g.clear();
-        g.beginFill(0x000000, 0.6);
-        g.drawRoundedRect(-width / 2, -height / 2, width, height + 20, 16);
+
+        g.beginFill(0x000000, 0.15);
+
+        // outer rectangle
+        g.drawRoundedRect(-width / 2, -height / 2, width + 10, height + 20, 16);
         g.endFill();
+
+        // border
+        g.lineStyle(2, 0xffffff, 0.3);
+        g.drawRoundedRect(-width / 2, -height / 2, width + 10, height + 20, 16);
       },
       [width, height]
     );

@@ -63,7 +63,6 @@ export default class SlotMachineController {
   private calculateWin(): number {
     // Simple win calculation - checking middle row for matching symbols
     const middleRow = this.state.reelPositions.map((reel) => reel[1]);
-    console.log("middle row:", middleRow);
 
     // Count consecutive matching symbols from left
     let matchCount = 1;
