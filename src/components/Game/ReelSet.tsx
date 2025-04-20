@@ -11,6 +11,7 @@ const ReelSet = ({
   cellHeight,
   isSpinning,
   reelPositions,
+  winningPositions = [],
 }: ReelGrid) => {
   const spinningRef = useRef(isSpinning);
   const isStoppingRef = useRef(false);
@@ -50,6 +51,11 @@ const ReelSet = ({
             ? reelPositions[columnIndex]
             : undefined;
 
+          // Find winning positions in this reel
+          const reelWinningPositions = winningPositions.filter(
+            ([colIndex]) => colIndex === columnIndex
+          );
+
           return (
             <Reel
               key={`reel-${columnIndex}`}
@@ -62,6 +68,8 @@ const ReelSet = ({
               isSpinning={isSpinning}
               reelIndex={columnIndex}
               targetPositions={targetPositions}
+              winningPositions={reelWinningPositions}
+              anyWinningSymbolsInGame={winningPositions.length > 0}
             />
           );
         })}

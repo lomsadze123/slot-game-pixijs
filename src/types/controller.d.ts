@@ -4,4 +4,5 @@ type SlotMachineState = {
   balance: number;
   betAmount: number;
   lastWin: number;
+  winningPositions: [number, number][];
 };

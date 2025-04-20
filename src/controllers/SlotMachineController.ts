@@ -22,6 +22,7 @@ export default class SlotMachineController {
       balance: 1000,
       betAmount: 20,
       lastWin: 0,
+      winningPositions: [],
     };
   }
 
@@ -38,6 +39,9 @@ export default class SlotMachineController {
     this.state.balance -= this.state.betAmount;
     this.state.isSpinning = true;
 
+    // Reset winning positions
+    this.state.winningPositions = [];
+
     // Create a promise that resolves when spinning is complete
     return new Promise((resolve) => {
       // Generate new random positions immediately but don't update UI yet
@@ -50,27 +54,36 @@ export default class SlotMachineController {
 
       // Start animation - when complete, resolve the promise
       setTimeout(() => {
-        const win = this.calculateWin();
+        const { win, winningPositions } = this.calculateWin();
         this.state.lastWin = win;
         this.state.balance += win;
         this.state.isSpinning = false;
+        this.state.winningPositions = winningPositions;
 
         resolve({ win });
       }, 1000);
     });
   }
 
-  private calculateWin(): number {
+  private calculateWin(): {
+    win: number;
+    winningPositions: [number, number][];
+  } {
     // Simple win calculation - checking middle row for matching symbols
     const middleRow = this.state.reelPositions.map((reel) => reel[1]);
+    const winningPositions: [number, number][] = [];
 
     // Count consecutive matching symbols from left
     let matchCount = 1;
     let matchSymbol = middleRow[0];
 
+    // Add first position
+    winningPositions.push([0, 1]); // [reelIndex, rowIndex]
+
     for (let i = 1; i < middleRow.length; i++) {
       if (middleRow[i] === matchSymbol) {
         matchCount++;
+        winningPositions.push([i, 1]); // Add position to winning positions
       } else {
         break;
       }
@@ -80,10 +93,17 @@ export default class SlotMachineController {
     if (matchCount >= 3) {
       // Different symbols have different values (higher number = higher value)
       const multiplier = (matchSymbol + 1) * matchCount;
-      return this.state.betAmount * multiplier;
+      return {
+        win: this.state.betAmount * multiplier,
+        winningPositions,
+      };
     }
 
-    return 0;
+    // No win
+    return {
+      win: 0,
+      winningPositions: [],
+    };
   }
 
   setBet(amount: number): void {

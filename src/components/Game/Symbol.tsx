@@ -1,11 +1,19 @@
 import { Container, Sprite } from "@pixi/react";
-import { useEffect, useState } from "react";
-import { Assets } from "pixi.js";
+import { useEffect, useState, useRef } from "react";
+import { Assets, Container as ContaineType } from "pixi.js";
 import { BG_ASSETS, SYMBOL_ASSETS } from "../../constants/pixiAssets";
 
-const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
+const Symbol = ({
+  x,
+  y,
+  width,
+  height,
+  symbolType,
+  isWinning = false,
+}: SymbolContainer) => {
   const [symbolLoaded, setSymbolLoaded] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const containerRef = useRef<ContaineType>(null);
 
   const safeSymbolType = symbolType % SYMBOL_ASSETS.length;
   const symbolPath = SYMBOL_ASSETS[safeSymbolType];
@@ -16,7 +24,6 @@ const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
       try {
         await Assets.load(symbolPath);
         setSymbolLoaded(true);
-
         await Assets.load(bgPath);
         setBgLoaded(true);
       } catch (err) {
@@ -26,7 +33,6 @@ const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
         );
       }
     };
-
     loadAssets();
   }, [symbolPath, bgPath, safeSymbolType]);
 
@@ -35,20 +41,31 @@ const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
   }
 
   return (
-    <Container position={[x, y]}>
+    <Container ref={containerRef} position={[x, y]}>
       <Sprite
         texture={Assets.get(bgPath)}
         anchor={0.5}
         width={width * 2}
         height={height * 1.8}
       />
-
       <Sprite
         texture={Assets.get(symbolPath)}
         anchor={0.5}
         width={width}
         height={height}
       />
+
+      {/* Add extra glow sprite for winning symbols */}
+      {isWinning && (
+        <Sprite
+          texture={Assets.get(symbolPath)}
+          anchor={0.5}
+          width={width * 1.1}
+          height={height * 1.1}
+          alpha={0.3}
+          tint={0xffff00}
+        />
+      )}
     </Container>
   );
 };

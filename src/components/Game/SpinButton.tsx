@@ -13,17 +13,15 @@ const SpinButton = ({
     (g: GraphicTypes) => {
       g.clear();
 
-      // Extra large button dimensions
       const width = 280;
       const height = 140;
       const cornerRadius = 40;
 
-      // Choose color based on spinning state
-      const buttonColor = isSpinning ? 0xe91e63 : 0x8bc34a; // Bright red when spinning, green when not
+      const buttonColor = isSpinning ? 0xe91e63 : 0x8bb93a;
       const shadowColor = isSpinning ? 0xb71c5b : 0x689f38;
+      const darkGreenOverlay = 0x558b2f;
 
-      // Enhanced 3D effect with multiple layers
-      // Bottom shadow (darkest)
+      // Bottom shadow
       g.beginFill(isSpinning ? 0x880e36 : 0x4c7634);
       g.lineStyle(0);
       g.drawRoundedRect(
@@ -35,9 +33,8 @@ const SpinButton = ({
       );
       g.endFill();
 
-      // Middle shadow layer
+      // Middle layer
       g.beginFill(shadowColor);
-      g.lineStyle(0);
       g.drawRoundedRect(
         -(width / 2),
         -(height / 2) + 5,
@@ -47,9 +44,8 @@ const SpinButton = ({
       );
       g.endFill();
 
-      // Main button background with rounded corners
+      // Main button
       g.beginFill(buttonColor);
-      g.lineStyle(0);
       g.drawRoundedRect(
         -(width / 2),
         -(height / 2),
@@ -59,12 +55,22 @@ const SpinButton = ({
       );
       g.endFill();
 
+      // Inner dark overlay
+      g.beginFill(darkGreenOverlay, 0.12);
+      g.drawRoundedRect(
+        -(width / 2) + 6,
+        -(height / 2) + 6,
+        width - 12,
+        height - 22,
+        cornerRadius - 6
+      );
+      g.endFill();
+
       if (isSpinning) {
-        // Stop square icon
+        // Stop square
         const stopSize = 70;
         const stopCorner = 18;
 
-        // Use a darker red for the stop icon
         g.beginFill(0x9c1048);
         g.drawRoundedRect(
           -(stopSize / 2),
@@ -75,11 +81,26 @@ const SpinButton = ({
         );
         g.endFill();
       } else {
-        // Play triangle icon with lighter green
+        // Play triangle icon
         const triangleHeight = 80;
+        const triangleShadowOffset = 4;
 
-        // Lighter green color for the play icon
-        g.beginFill(0x7cb342); // Lighter, more visible green
+        // Shadow for triangle
+        g.beginFill(0x33691e, 0.5);
+        g.moveTo(
+          -30 + triangleShadowOffset,
+          -triangleHeight / 2 + triangleShadowOffset
+        );
+        g.lineTo(50 + triangleShadowOffset, 0 + triangleShadowOffset);
+        g.lineTo(
+          -30 + triangleShadowOffset,
+          triangleHeight / 2 + triangleShadowOffset
+        );
+        g.closePath();
+        g.endFill();
+
+        // Main triangle
+        g.beginFill(0x7ca142);
         g.moveTo(-30, -triangleHeight / 2);
         g.lineTo(50, 0);
         g.lineTo(-30, triangleHeight / 2);

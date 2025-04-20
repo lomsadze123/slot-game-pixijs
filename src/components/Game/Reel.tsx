@@ -14,6 +14,8 @@ const Reel = ({
   symbols,
   reelIndex,
   targetPositions,
+  winningPositions = [],
+  anyWinningSymbolsInGame,
 }: ReelSymbolContainer) => {
   const [offset, setOffset] = useState(0);
   const maskRef = useRef<GraphicsType>(null);
@@ -23,6 +25,7 @@ const Reel = ({
   const stoppingRef = useRef(false);
   const totalSpins = useRef(0);
   const finalPositionsRef = useRef<number[] | null>(null);
+  const reelHasWinningSymbolsRef = useRef(false);
 
   const symbolHeight = height / symbolCount;
 
@@ -31,6 +34,13 @@ const Reel = ({
   const stopDelayPerReel = 300;
   const spinSpeed = 7;
   const baseDuration = 1000 / spinSpeed; // Base duration for one symbol movement
+
+  const hasWinningSymbols = winningPositions.length > 0;
+
+  // Keep track of winning state for animations
+  useEffect(() => {
+    reelHasWinningSymbolsRef.current = hasWinningSymbols;
+  }, [hasWinningSymbols]);
 
   const drawMask = useCallback(
     (g: GraphicsType) => {
@@ -52,6 +62,46 @@ const Reel = ({
     [width, height]
   );
 
+  const drawWinEffect = useCallback(
+    (g: GraphicsType) => {
+      g.clear();
+
+      if (isSpinning || !anyWinningSymbolsInGame) {
+        return;
+      }
+
+      // If this reel has no winning positions, blur the entire reel
+      if (winningPositions.length === 0) {
+        g.beginFill(0x000000, 0.7);
+        g.drawRect(0, 0, width, height);
+        g.endFill();
+        return;
+      }
+
+      // For reels with winning positions, blur only the non-winning rows
+      const winningRows = winningPositions.map(([_, rowIndex]) => rowIndex);
+
+      // Draw blur for each row that is not winning
+      for (let rowIndex = 0; rowIndex < symbolCount; rowIndex++) {
+        if (!winningRows.includes(rowIndex)) {
+          const rowY = rowIndex * symbolHeight;
+          g.beginFill(0x000000, 0.7);
+          g.drawRect(0, rowY, width, symbolHeight);
+          g.endFill();
+        }
+      }
+    },
+    [
+      width,
+      height,
+      isSpinning,
+      winningPositions,
+      anyWinningSymbolsInGame,
+      symbolCount,
+      symbolHeight,
+    ]
+  );
+
   const animate = useCallback((time: number) => {
     update(time);
     animationFrameRef.current = requestAnimationFrame(animate);
@@ -60,7 +110,6 @@ const Reel = ({
   // Normal spinning animation - constant speed
   const spinOneSymbol = useCallback(() => {
     if (!spinningRef.current) return;
-
     totalSpins.current++;
 
     const from = { y: 0 };
@@ -73,7 +122,6 @@ const Reel = ({
       .onComplete(() => {
         // Reset position and cycle symbols
         setOffset(0);
-
         // (move first to end)
         activeSymbolsRef.current = [
           ...activeSymbolsRef.current.slice(1),
@@ -97,16 +145,13 @@ const Reel = ({
       // If no target positions, just continue with random results
       return;
     }
-
     // Create a new array of symbols that will ensure the visible area shows targetPositions
     const newSymbols = [...targetPositions];
-
     // Add extra symbols at the end for smooth animation
     // (we'll only care about the visible ones but need the extras for animation)
     for (let i = 0; i < symbolCount; i++) {
       newSymbols.push(Math.floor(Math.random() * 8));
     }
-
     finalPositionsRef.current = newSymbols;
   }, [targetPositions, symbolCount]);
 
@@ -114,17 +159,14 @@ const Reel = ({
     if (finalPositionsRef.current === null && targetPositions) {
       prepareStopPositions();
     }
-
     const slowdownSpins = 4;
     let currentSpin = 0;
-
     const performSlowSpin = () => {
       if (currentSpin >= slowdownSpins) {
         // Final adjustment to ensure correct positions are shown
         if (finalPositionsRef.current) {
           activeSymbolsRef.current = [...finalPositionsRef.current];
         }
-
         // Final bounce and stop
         new Tween({ y: -symbolHeight * 0.15 })
           .to({ y: 0 }, 300)
@@ -139,14 +181,11 @@ const Reel = ({
           .start();
         return;
       }
-
       // Calculate progressively longer duration
       const slowdownFactor = 1.5 + currentSpin * 0.8;
       const duration = baseDuration * slowdownFactor;
-
       const from = { y: 0 };
       const to = { y: -symbolHeight };
-
       // If we're on the final spin before stopping, prepare to show the correct symbols
       if (currentSpin === slowdownSpins - 1 && finalPositionsRef.current) {
         // On the penultimate spin, set up the activeSymbols to properly transition to final position
@@ -156,40 +195,33 @@ const Reel = ({
         ];
         activeSymbolsRef.current = adjustedSymbols;
       }
-
       new Tween(from)
         .to(to, duration) // Progressively slower
         .easing(Easing.Sinusoidal.InOut)
         .onUpdate(() => setOffset(from.y))
         .onComplete(() => {
           setOffset(0);
-
           activeSymbolsRef.current = [
             ...activeSymbolsRef.current.slice(1),
             activeSymbolsRef.current[0],
           ];
-
           currentSpin++;
           performSlowSpin(); // Continue with next slower spin
         })
         .start();
     };
-
     // Start the slowdown sequence
     performSlowSpin();
   }, [symbolHeight, baseDuration, targetPositions, prepareStopPositions]);
 
   const startSpinning = useCallback(() => {
     if (spinningRef.current) return;
-
     spinningRef.current = true;
     stoppingRef.current = false;
     totalSpins.current = 0;
     finalPositionsRef.current = null;
-
     // Cancel any existing animations
     removeAll();
-
     setTimeout(() => {
       // Initial bounce
       const bounce = { y: 0 };
@@ -219,7 +251,6 @@ const Reel = ({
     if (!animationFrameRef.current) {
       animationFrameRef.current = requestAnimationFrame(animate);
     }
-
     if (isSpinning && !spinningRef.current) {
       startSpinning();
     } else if (!isSpinning && spinningRef.current && !stoppingRef.current) {
@@ -254,26 +285,43 @@ const Reel = ({
     return visibleSymbols;
   };
 
+  // Determine if a symbol at specific position is part of a winning line
+  const isWinningPosition = (rowIndex: number) => {
+    if (!hasWinningSymbols) return false;
+
+    // Check if the row index is in our winning positions
+    return winningPositions.some(([_, row]) => row === rowIndex);
+  };
+
   const visibleSymbols = getVisibleSymbols();
 
   return (
     <Container position={[x, y]}>
       <Graphics draw={drawReelBackground} />
-
       <Graphics draw={drawMask} ref={maskRef} />
 
       <Container y={offset} mask={maskRef.current}>
-        {visibleSymbols.map((symbolType, index) => (
-          <Symbol
-            key={`symbol-${index}-${totalSpins.current}`}
-            x={width / 2}
-            y={index * symbolHeight + symbolHeight / 2}
-            width={width * 0.8}
-            height={symbolHeight * 0.8}
-            symbolType={symbolType}
-          />
-        ))}
+        {visibleSymbols.map((symbolType, index) => {
+          // The visible row index corresponds to the position (0 to symbolCount-1)
+          const visibleRowIndex = index % symbolCount;
+          const isWinning = isWinningPosition(visibleRowIndex);
+
+          return (
+            <Symbol
+              key={`symbol-${index}-${totalSpins.current}`}
+              x={width / 2}
+              y={index * symbolHeight + symbolHeight / 2}
+              width={width * 0.8}
+              height={symbolHeight * 0.8}
+              symbolType={symbolType}
+              isWinning={isWinning && !isSpinning}
+            />
+          );
+        })}
       </Container>
+
+      {/* Win/lose effect overlay */}
+      <Graphics draw={drawWinEffect} />
     </Container>
   );
 };

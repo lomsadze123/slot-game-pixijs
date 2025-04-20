@@ -35,17 +35,14 @@ const BalanceDisplay = ({
     }
   }, [lastWin, isSpinning]);
 
-  // Draw background panel - matching the size and style of BetControls
   const drawBackground = useCallback((g: GraphicsType) => {
     g.clear();
-    // Dark blue background with rounded corners, same as BetControls
     g.beginFill(0x1a1a3a, 0.95);
     g.lineStyle(1, 0x4a4a8a, 0.5);
-    g.drawRoundedRect(-140, -25, 280, 70, 10); // Made height slightly shorter since we don't need buttons
+    g.drawRoundedRect(-140, -25, 280, 70, 10);
     g.endFill();
   }, []);
 
-  // Label text style - matching BetControls
   const labelStyle = new TextStyle({
     fill: 0x9090ff,
     fontSize: 24,
@@ -53,7 +50,6 @@ const BalanceDisplay = ({
     fontFamily: "Arial",
   });
 
-  // Amount text style - matching BetControls
   const amountStyle = new TextStyle({
     fill: 0xffffff,
     fontSize: 32,
@@ -73,10 +69,8 @@ const BalanceDisplay = ({
 
   return (
     <Container position={[x, y]}>
-      {/* Background panel */}
       <Graphics draw={drawBackground} />
 
-      {/* Balance label - positioned like BetControls label */}
       <Text
         text="BALANCE"
         position={[-65, 10]}
@@ -84,7 +78,6 @@ const BalanceDisplay = ({
         style={labelStyle}
       />
 
-      {/* Balance amount */}
       <Text
         text={`${balance}`}
         position={[60, 10]}
@@ -92,7 +85,6 @@ const BalanceDisplay = ({
         style={amountStyle}
       />
 
-      {/* Win display below the balance display when there's a win */}
       {lastWin > 0 && !isSpinning && (
         <Container position={[0, 70]}>
           <Text

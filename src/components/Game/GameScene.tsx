@@ -13,6 +13,7 @@ const GameScene = ({ width, height }: Size) => {
     balance: 1000,
     betAmount: 20,
     lastWin: 0,
+    winningPositions: [],
   });
 
   // Get initial state from controller

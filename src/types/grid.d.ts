@@ -6,6 +6,7 @@ interface ReelGrid extends Position {
   isSpinning: boolean;
   reelPositions: number[][];
   spinDelay?: number;
+  winningPositions: [number, number][];
 }
 
 interface ReelSymbolContainer extends Dimension {
@@ -14,8 +15,11 @@ interface ReelSymbolContainer extends Dimension {
   symbols: number[];
   reelIndex: number;
   targetPositions?: number[];
+  winningPositions: [number, number][];
+  anyWinningSymbolsInGame: boolean;
 }
 
 interface SymbolContainer extends Dimension {
   symbolType: number;
+  isWinning: boolean;
 }
