@@ -64,6 +64,7 @@ const BetControls = ({
       <Container
         position={[-60, 0]}
         eventMode={disabled ? "none" : "static"}
+        cursor="pointer"
         pointerdown={handleDecreaseBet}
       >
         <Graphics draw={(g) => drawButton(g, false)} />
@@ -74,6 +75,7 @@ const BetControls = ({
       <Container
         position={[60, 0]}
         eventMode={disabled ? "none" : "static"}
+        cursor="pointer"
         pointerdown={handleIncreaseBet}
       >
         <Graphics draw={(g) => drawButton(g, true)} />

@@ -21,16 +21,39 @@ const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
     const rows = 3;
 
     const controllerRef = useRef(new SlotMachineController(columns, rows));
-    const [gameState, setGameState] = useState(
+    const [gameState, setGameState] = useState<SlotMachineState>(
       controllerRef.current.getState()
     );
+
+    const [displayBalance, setDisplayBalance] = useState(gameState.balance);
+
+    useEffect(() => {
+      // Animate balance changes
+      if (displayBalance !== gameState.balance) {
+        const diff = gameState.balance - displayBalance;
+        const step = Math.max(1, Math.abs(diff) / 20);
+
+        const timer = setTimeout(() => {
+          if (Math.abs(gameState.balance - displayBalance) <= step) {
+            setDisplayBalance(gameState.balance);
+          } else {
+            setDisplayBalance((prev) => (diff > 0 ? prev + step : prev - step));
+          }
+        }, 50);
+
+        return () => clearTimeout(timer);
+      }
+    }, [gameState.balance, displayBalance]);
 
     // When state changes, call the onStateUpdate callback
     useEffect(() => {
       if (onStateUpdate) {
-        onStateUpdate(gameState);
+        onStateUpdate({
+          ...gameState,
+          balance: displayBalance,
+        });
       }
-    }, [gameState, onStateUpdate]);
+    }, [gameState, onStateUpdate, displayBalance]);
 
     // Expose spin method to parent
     useImperativeHandle(ref, () => ({

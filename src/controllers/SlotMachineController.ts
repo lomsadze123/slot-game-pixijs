@@ -40,14 +40,16 @@ export default class SlotMachineController {
 
     // Create a promise that resolves when spinning is complete
     return new Promise((resolve) => {
-      // Simulate spin delay (would be replaced by animations)
-      setTimeout(() => {
-        // Generate new random positions
-        this.state.reelPositions = this.state.reelPositions.map((reel) =>
-          reel.map(() => Math.floor(Math.random() * this.totalSymbols))
-        );
+      // Generate new random positions immediately but don't update UI yet
+      const newPositions = this.state.reelPositions.map((reel) =>
+        reel.map(() => Math.floor(Math.random() * this.totalSymbols))
+      );
 
-        // Calculate wins
+      // Store the new positions to be used after animation completes
+      this.state.reelPositions = newPositions;
+
+      // Start animation - when complete, resolve the promise
+      setTimeout(() => {
         const win = this.calculateWin();
         this.state.lastWin = win;
         this.state.balance += win;
@@ -61,6 +63,7 @@ export default class SlotMachineController {
   private calculateWin(): number {
     // Simple win calculation - checking middle row for matching symbols
     const middleRow = this.state.reelPositions.map((reel) => reel[1]);
+    console.log("middle row:", middleRow);
 
     // Count consecutive matching symbols from left
     let matchCount = 1;

@@ -29,6 +29,7 @@ const SpinButton = ({
     <Container
       position={[x, y]}
       eventMode={disabled ? "none" : "static"}
+      cursor="pointer"
       pointerdown={disabled ? undefined : handleSpin}
       alpha={disabled ? 0.7 : 1}
     >

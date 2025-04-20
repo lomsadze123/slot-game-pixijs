@@ -1,7 +1,8 @@
 import { Container, Graphics } from "@pixi/react";
-import { Graphics as GraphicTypes } from "pixi.js";
+import { Graphics as GraphicsType } from "pixi.js";
 import { useCallback, useState, useEffect, useRef } from "react";
 import Symbol from "./Symbol";
+import { Easing, removeAll, Tween, update } from "@tweenjs/tween.js";
 
 const Reel = ({
   x,
@@ -11,43 +12,28 @@ const Reel = ({
   symbolCount,
   isSpinning,
   symbols,
+  reelIndex,
+  targetPositions,
 }: ReelSymbolContainer) => {
-  // Track vertical offset for spinning animation
   const [offset, setOffset] = useState(0);
-  // Reference for the mask
-  const maskRef = useRef<GraphicTypes>(null);
+  const maskRef = useRef<GraphicsType>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const activeSymbolsRef = useRef<number[]>([...symbols]);
+  const spinningRef = useRef(false);
+  const stoppingRef = useRef(false);
+  const totalSpins = useRef(0);
+  const finalPositionsRef = useRef<number[] | null>(null);
 
-  // Simple spinning animation using useEffect
-  useEffect(() => {
-    if (!isSpinning) return;
+  const symbolHeight = height / symbolCount;
 
-    let animationId: number;
-    let currentOffset = 0;
-    const speed = 30; // pixels per frame
+  // Animation timing constants
+  const startDelayPerReel = 150;
+  const stopDelayPerReel = 300;
+  const spinSpeed = 7;
+  const baseDuration = 1000 / spinSpeed; // Base duration for one symbol movement
 
-    const animate = () => {
-      currentOffset += speed;
-
-      // When we've moved a full symbol height, reset and shift the symbols
-      if (currentOffset >= height / symbolCount) {
-        currentOffset = 0;
-        // This would actually be handled by the controller
-      }
-
-      setOffset(currentOffset);
-      animationId = requestAnimationFrame(animate);
-    };
-
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [isSpinning, height, symbolCount]);
-
-  // Create mask for the reel to prevent overflow
   const drawMask = useCallback(
-    (g: GraphicTypes) => {
+    (g: GraphicsType) => {
       g.clear();
       g.beginFill(0xffffff);
       g.drawRect(0, 0, width, height);
@@ -57,29 +43,229 @@ const Reel = ({
   );
 
   const drawReelBackground = useCallback(
-    (g: GraphicTypes) => {
+    (g: GraphicsType) => {
       g.clear();
-      g.beginFill(0x333333, 0.5);
+      g.beginFill(0x333333, 0.2);
       g.drawRoundedRect(0, 0, width, height, 8);
       g.endFill();
     },
     [width, height]
   );
 
-  const symbolHeight = height / symbolCount;
+  const animate = useCallback((time: number) => {
+    update(time);
+    animationFrameRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Normal spinning animation - constant speed
+  const spinOneSymbol = useCallback(() => {
+    if (!spinningRef.current) return;
+
+    totalSpins.current++;
+
+    const from = { y: 0 };
+    const to = { y: -symbolHeight };
+
+    new Tween(from)
+      .to(to, baseDuration)
+      .easing(Easing.Sinusoidal.InOut)
+      .onUpdate(() => setOffset(from.y))
+      .onComplete(() => {
+        // Reset position and cycle symbols
+        setOffset(0);
+
+        // (move first to end)
+        activeSymbolsRef.current = [
+          ...activeSymbolsRef.current.slice(1),
+          activeSymbolsRef.current[0],
+        ];
+
+        if (spinningRef.current) {
+          if (stoppingRef.current) {
+            beginStopSequence();
+          } else {
+            spinOneSymbol(); // Continue spinning
+          }
+        }
+      })
+      .start();
+  }, [baseDuration, symbolHeight]);
+
+  // Prepare the reel to show the final positions when stopping
+  const prepareStopPositions = useCallback(() => {
+    if (!targetPositions || !Array.isArray(targetPositions)) {
+      // If no target positions, just continue with random results
+      return;
+    }
+
+    // Create a new array of symbols that will ensure the visible area shows targetPositions
+    const newSymbols = [...targetPositions];
+
+    // Add extra symbols at the end for smooth animation
+    // (we'll only care about the visible ones but need the extras for animation)
+    for (let i = 0; i < symbolCount; i++) {
+      newSymbols.push(Math.floor(Math.random() * 8));
+    }
+
+    finalPositionsRef.current = newSymbols;
+  }, [targetPositions, symbolCount]);
+
+  const beginStopSequence = useCallback(() => {
+    if (finalPositionsRef.current === null && targetPositions) {
+      prepareStopPositions();
+    }
+
+    const slowdownSpins = 4;
+    let currentSpin = 0;
+
+    const performSlowSpin = () => {
+      if (currentSpin >= slowdownSpins) {
+        // Final adjustment to ensure correct positions are shown
+        if (finalPositionsRef.current) {
+          activeSymbolsRef.current = [...finalPositionsRef.current];
+        }
+
+        // Final bounce and stop
+        new Tween({ y: -symbolHeight * 0.15 })
+          .to({ y: 0 }, 300)
+          .easing(Easing.Back.Out)
+          .onUpdate(({ y }) => setOffset(y))
+          .onComplete(() => {
+            spinningRef.current = false;
+            stoppingRef.current = false;
+            setOffset(0);
+            finalPositionsRef.current = null;
+          })
+          .start();
+        return;
+      }
+
+      // Calculate progressively longer duration
+      const slowdownFactor = 1.5 + currentSpin * 0.8;
+      const duration = baseDuration * slowdownFactor;
+
+      const from = { y: 0 };
+      const to = { y: -symbolHeight };
+
+      // If we're on the final spin before stopping, prepare to show the correct symbols
+      if (currentSpin === slowdownSpins - 1 && finalPositionsRef.current) {
+        // On the penultimate spin, set up the activeSymbols to properly transition to final position
+        const adjustedSymbols = [
+          ...finalPositionsRef.current.slice(1),
+          finalPositionsRef.current[0],
+        ];
+        activeSymbolsRef.current = adjustedSymbols;
+      }
+
+      new Tween(from)
+        .to(to, duration) // Progressively slower
+        .easing(Easing.Sinusoidal.InOut)
+        .onUpdate(() => setOffset(from.y))
+        .onComplete(() => {
+          setOffset(0);
+
+          activeSymbolsRef.current = [
+            ...activeSymbolsRef.current.slice(1),
+            activeSymbolsRef.current[0],
+          ];
+
+          currentSpin++;
+          performSlowSpin(); // Continue with next slower spin
+        })
+        .start();
+    };
+
+    // Start the slowdown sequence
+    performSlowSpin();
+  }, [symbolHeight, baseDuration, targetPositions, prepareStopPositions]);
+
+  const startSpinning = useCallback(() => {
+    if (spinningRef.current) return;
+
+    spinningRef.current = true;
+    stoppingRef.current = false;
+    totalSpins.current = 0;
+    finalPositionsRef.current = null;
+
+    // Cancel any existing animations
+    removeAll();
+
+    setTimeout(() => {
+      // Initial bounce
+      const bounce = { y: 0 };
+      new Tween(bounce)
+        .to({ y: -symbolHeight * 0.15 }, 100)
+        .easing(Easing.Quadratic.Out)
+        .yoyo(true)
+        .repeat(1)
+        .onUpdate(() => setOffset(bounce.y))
+        .onComplete(() => {
+          // Start actual spinning immediately after this reel's bounce
+          spinOneSymbol();
+        })
+        .start();
+    }, reelIndex * startDelayPerReel);
+  }, [symbolHeight, startDelayPerReel, reelIndex, spinOneSymbol]);
+
+  const stopSpinning = useCallback(() => {
+    if (!spinningRef.current || stoppingRef.current) return;
+    stoppingRef.current = true;
+    // Prepare the final positions that will be shown
+    prepareStopPositions();
+  }, [prepareStopPositions]);
+
+  // Handle spin state changes with sequential stopping
+  useEffect(() => {
+    if (!animationFrameRef.current) {
+      animationFrameRef.current = requestAnimationFrame(animate);
+    }
+
+    if (isSpinning && !spinningRef.current) {
+      startSpinning();
+    } else if (!isSpinning && spinningRef.current && !stoppingRef.current) {
+      setTimeout(() => {
+        stopSpinning();
+      }, reelIndex * stopDelayPerReel);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [
+    isSpinning,
+    animate,
+    startSpinning,
+    stopSpinning,
+    reelIndex,
+    stopDelayPerReel,
+  ]);
+
+  const getVisibleSymbols = () => {
+    // We need symbolCount + 2 symbols to ensure smooth scrolling
+    const visibleSymbols = [];
+    for (let i = 0; i < symbolCount + 2; i++) {
+      visibleSymbols.push(
+        activeSymbolsRef.current[i % activeSymbolsRef.current.length]
+      );
+    }
+    return visibleSymbols;
+  };
+
+  const visibleSymbols = getVisibleSymbols();
 
   return (
     <Container position={[x, y]}>
       <Graphics draw={drawReelBackground} />
 
-      {/* Create a mask */}
       <Graphics draw={drawMask} ref={maskRef} />
 
-      {/* Apply the mask to the symbols container */}
-      <Container y={isSpinning ? offset : 0} mask={maskRef.current}>
-        {symbols.map((symbolType, index) => (
+      <Container y={offset} mask={maskRef.current}>
+        {visibleSymbols.map((symbolType, index) => (
           <Symbol
-            key={`symbol-${index}`}
+            key={`symbol-${index}-${totalSpins.current}`}
             x={width / 2}
             y={index * symbolHeight + symbolHeight / 2}
             width={width * 0.8}
