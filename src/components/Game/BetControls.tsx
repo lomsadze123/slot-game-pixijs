@@ -2,12 +2,6 @@ import { Container, Graphics, Text } from "@pixi/react";
 import { TextStyle, Graphics as GraphicsType } from "pixi.js";
 import { useCallback } from "react";
 
-interface BetControlsProps extends Position {
-  betAmount: number;
-  onChangeBet: (amount: number) => void;
-  disabled: boolean;
-}
-
 const BetControls = ({
   x,
   y,
@@ -15,16 +9,34 @@ const BetControls = ({
   onChangeBet,
   disabled,
 }: BetControlsProps) => {
+  // Draw background panel
+  const drawBackground = useCallback((g: GraphicsType) => {
+    g.clear();
+    // Dark blue background with rounded corners
+    g.beginFill(0x1a1a3a, 0.7);
+    g.lineStyle(1, 0x4a4a8a, 0.5);
+    g.drawRoundedRect(-140, -25, 280, 110, 10);
+    g.endFill();
+  }, []);
+
+  // Draw +/- buttons
   const drawButton = useCallback(
     (g: GraphicsType, isPlus: boolean) => {
       g.clear();
-      g.beginFill(disabled ? 0x555555 : 0x44aa33);
-      g.lineStyle(2, 0xffffff);
-      g.drawCircle(0, 0, 20);
+
+      // Button size
+      const width = 45;
+      const height = 45;
+      const radius = 6;
+
+      // Background with slight rounding
+      g.beginFill(disabled ? 0x333355 : 0x2a2a4a); // button fill
+      g.lineStyle(2, 0x6c63ff, 0.1); // stronger, cleaner border
+      g.drawRoundedRect(-width / 2, -height / 2, width, height, radius);
       g.endFill();
 
       // Draw '+' or '-' symbol
-      g.lineStyle(3, 0xffffff);
+      g.lineStyle(3, 0xffffff, 1); // white line, thicker
       g.moveTo(-8, 0);
       g.lineTo(8, 0);
 
@@ -48,21 +60,38 @@ const BetControls = ({
     }
   }, [betAmount, onChangeBet, disabled]);
 
-  const textStyle = new TextStyle({
+  // Label text style
+  const labelStyle = new TextStyle({
+    fill: 0x9090ff,
+    fontSize: 18,
+    fontWeight: "500",
+    fontFamily: "Arial",
+  });
+
+  // Amount text style
+  const amountStyle = new TextStyle({
     fill: 0xffffff,
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
-    dropShadow: true,
-    dropShadowColor: 0x000000,
-    dropShadowDistance: 2,
+    fontFamily: "Arial",
   });
 
   return (
     <Container position={[x, y]}>
-      <Text text="BET" anchor={[0.5, 1.5]} style={textStyle} />
+      {/* Background panel */}
+      <Graphics draw={drawBackground} />
 
+      {/* Bet amount with dollar sign */}
+      <Text
+        text={`$${betAmount.toString()}`}
+        position={[-100, 50]}
+        anchor={[0.5, 0.5]}
+        style={amountStyle}
+      />
+
+      {/* Decrease button */}
       <Container
-        position={[-60, 0]}
+        position={[40, 30]}
         eventMode={disabled ? "none" : "static"}
         cursor="pointer"
         pointerdown={handleDecreaseBet}
@@ -70,16 +99,22 @@ const BetControls = ({
         <Graphics draw={(g) => drawButton(g, false)} />
       </Container>
 
-      <Text text={`${betAmount}`} anchor={[0.5, 0.5]} style={textStyle} />
-
+      {/* Increase button */}
       <Container
-        position={[60, 0]}
+        position={[100, 30]}
         eventMode={disabled ? "none" : "static"}
         cursor="pointer"
         pointerdown={handleIncreaseBet}
       >
         <Graphics draw={(g) => drawButton(g, true)} />
       </Container>
+
+      <Text
+        text="BET AMOUNT"
+        position={[-65, 10]}
+        anchor={[0.5, 0.5]}
+        style={labelStyle}
+      />
     </Container>
   );
 };

@@ -40,7 +40,7 @@ const Symbol = ({ x, y, width, height, symbolType }: SymbolContainer) => {
         texture={Assets.get(bgPath)}
         anchor={0.5}
         width={width * 2}
-        height={height * 1.1}
+        height={height * 1.8}
       />
 
       <Sprite

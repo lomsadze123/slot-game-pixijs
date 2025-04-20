@@ -1,12 +1,6 @@
-import { Container, Text } from "@pixi/react";
-import { TextStyle, Text as PIXIText } from "pixi.js";
-import { useEffect, useRef } from "react";
-
-interface BalanceDisplayProps extends Position {
-  balance: number;
-  lastWin: number;
-  isSpinning: boolean;
-}
+import { Container, Graphics, Text } from "@pixi/react";
+import { TextStyle, Text as PIXIText, Graphics as GraphicsType } from "pixi.js";
+import { useEffect, useRef, useCallback } from "react";
 
 const BalanceDisplay = ({
   x,
@@ -41,35 +35,73 @@ const BalanceDisplay = ({
     }
   }, [lastWin, isSpinning]);
 
-  const balanceStyle = new TextStyle({
-    fill: 0xffffff,
+  // Draw background panel - matching the size and style of BetControls
+  const drawBackground = useCallback((g: GraphicsType) => {
+    g.clear();
+    // Dark blue background with rounded corners, same as BetControls
+    g.beginFill(0x1a1a3a, 0.95);
+    g.lineStyle(1, 0x4a4a8a, 0.5);
+    g.drawRoundedRect(-140, -25, 280, 70, 10); // Made height slightly shorter since we don't need buttons
+    g.endFill();
+  }, []);
+
+  // Label text style - matching BetControls
+  const labelStyle = new TextStyle({
+    fill: 0x9090ff,
     fontSize: 24,
+    fontWeight: "500",
+    fontFamily: "Arial",
+  });
+
+  // Amount text style - matching BetControls
+  const amountStyle = new TextStyle({
+    fill: 0xffffff,
+    fontSize: 32,
     fontWeight: "bold",
+    fontFamily: "Arial",
+  });
+
+  const winStyle = new TextStyle({
+    fill: 0xffdd00,
+    fontSize: 28,
+    fontWeight: "bold",
+    fontFamily: "Arial",
     dropShadow: true,
     dropShadowColor: 0x000000,
     dropShadowDistance: 2,
   });
 
-  const winStyle = new TextStyle({
-    fill: 0xffdd00,
-    fontSize: 32,
-    fontWeight: "bold",
-    dropShadow: true,
-    dropShadowColor: 0x000000,
-    dropShadowDistance: 4,
-  });
-
   return (
     <Container position={[x, y]}>
-      <Text text={`BALANCE: ${balance}`} anchor={0.5} style={balanceStyle} />
+      {/* Background panel */}
+      <Graphics draw={drawBackground} />
 
+      {/* Balance label - positioned like BetControls label */}
+      <Text
+        text="BALANCE"
+        position={[-65, 10]}
+        anchor={[0.5, 0.5]}
+        style={labelStyle}
+      />
+
+      {/* Balance amount */}
+      <Text
+        text={`${balance}`}
+        position={[60, 10]}
+        anchor={[0.5, 0.5]}
+        style={amountStyle}
+      />
+
+      {/* Win display below the balance display when there's a win */}
       {lastWin > 0 && !isSpinning && (
-        <Text
-          ref={winTextRef}
-          text={`WIN: ${lastWin}`}
-          anchor={[0, 1.5]}
-          style={winStyle}
-        />
+        <Container position={[0, 70]}>
+          <Text
+            ref={winTextRef}
+            text={`WIN: ${lastWin}`}
+            anchor={[0.5, 0]}
+            style={winStyle}
+          />
+        </Container>
       )}
     </Container>
   );

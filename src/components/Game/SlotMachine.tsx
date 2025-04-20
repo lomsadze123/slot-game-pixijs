@@ -11,10 +11,6 @@ import { Graphics as GraphicsType } from "pixi.js";
 import ReelSet from "./ReelSet";
 import SlotMachineController from "../../controllers/SlotMachineController";
 
-interface SlotMachineProps extends Dimension {
-  onStateUpdate?: (state: SlotMachineState) => void;
-}
-
 const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
   ({ x, y, width, height, onStateUpdate }, ref) => {
     const columns = 5;
@@ -32,25 +28,24 @@ const SlotMachine = forwardRef<SlotMachineRef, SlotMachineProps>(
       if (displayBalance !== gameState.balance) {
         const diff = gameState.balance - displayBalance;
         const step = Math.max(1, Math.abs(diff) / 20);
-
         const timer = setTimeout(() => {
           if (Math.abs(gameState.balance - displayBalance) <= step) {
-            setDisplayBalance(gameState.balance);
+            setDisplayBalance(Math.round(gameState.balance));
           } else {
-            setDisplayBalance((prev) => (diff > 0 ? prev + step : prev - step));
+            setDisplayBalance((prev) =>
+              Math.round(diff > 0 ? prev + step : prev - step)
+            );
           }
         }, 50);
-
         return () => clearTimeout(timer);
       }
     }, [gameState.balance, displayBalance]);
 
-    // When state changes, call the onStateUpdate callback
     useEffect(() => {
       if (onStateUpdate) {
         onStateUpdate({
           ...gameState,
-          balance: displayBalance,
+          balance: Math.round(displayBalance),
         });
       }
     }, [gameState, onStateUpdate, displayBalance]);

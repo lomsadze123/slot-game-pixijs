@@ -51,7 +51,7 @@ const GameScene = ({ width, height }: Size) => {
   // Position UI elements on the right
   const rightPanelX = width * 0.85; // Center of right 30% of screen
   const balanceY = height * 0.3;
-  const betControlsY = height * 0.5;
+  const betControlsY = height * 0.45;
   const spinButtonY = height * 0.7;
 
   return (
@@ -86,6 +86,7 @@ const GameScene = ({ width, height }: Size) => {
         disabled={
           gameState.isSpinning || gameState.balance < gameState.betAmount
         }
+        isSpinning={gameState.isSpinning}
         x={rightPanelX}
         y={spinButtonY}
       />
