@@ -15,6 +15,9 @@ const GameScene = ({ width, height }: Size) => {
     lastWin: 0,
     winningPositions: [],
   });
+  // Add a separate UI disabled state with a longer duration
+  const [uiDisabled, setUiDisabled] = useState(false);
+  const reelAnimationTime = 3000;
 
   // Get initial state from controller
   useEffect(() => {
@@ -25,12 +28,19 @@ const GameScene = ({ width, height }: Size) => {
 
   const handleSpin = useCallback(() => {
     if (slotMachineRef.current) {
+      setUiDisabled(true);
+
       slotMachineRef.current.spin().then(() => {
         // Update state after spin
         setGameState(slotMachineRef.current!.getState());
+
+        // Keep UI disabled for longer duration to match reel animation
+        setTimeout(() => {
+          setUiDisabled(false);
+        }, reelAnimationTime);
       });
     }
-  }, []);
+  }, [reelAnimationTime]);
 
   const handleBetChange = useCallback((newBet: number) => {
     if (slotMachineRef.current) {
@@ -71,7 +81,7 @@ const GameScene = ({ width, height }: Size) => {
         y={balanceY}
         balance={gameState.balance}
         lastWin={gameState.lastWin}
-        isSpinning={gameState.isSpinning}
+        isSpinning={uiDisabled}
       />
 
       <BetControls
@@ -79,15 +89,13 @@ const GameScene = ({ width, height }: Size) => {
         y={betControlsY}
         betAmount={gameState.betAmount}
         onChangeBet={handleBetChange}
-        disabled={gameState.isSpinning}
+        disabled={uiDisabled}
       />
 
       <SpinButton
         handleSpin={handleSpin}
-        disabled={
-          gameState.isSpinning || gameState.balance < gameState.betAmount
-        }
-        isSpinning={gameState.isSpinning}
+        disabled={uiDisabled || gameState.balance < gameState.betAmount}
+        isSpinning={uiDisabled}
         x={rightPanelX}
         y={spinButtonY}
       />

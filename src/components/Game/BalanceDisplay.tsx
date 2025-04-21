@@ -1,39 +1,48 @@
 import { Container, Graphics, Text } from "@pixi/react";
 import { TextStyle, Text as PIXIText, Graphics as GraphicsType } from "pixi.js";
 import { useEffect, useRef, useCallback } from "react";
+import { hslToHex } from "../../helper/hslToHex";
 
 const BalanceDisplay = ({
   x,
   y,
   balance,
   lastWin,
-  isSpinning,
+  showWinAnimation = false,
 }: BalanceDisplayProps) => {
   const winTextRef = useRef<PIXIText>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (lastWin > 0 && !isSpinning && winTextRef.current) {
+    if (showWinAnimation && lastWin > 0 && winTextRef.current) {
       // Create a win animation
       const animate = () => {
-        if (!winTextRef.current) return;
+        if (!winTextRef.current || !showWinAnimation) return;
 
-        winTextRef.current.scale.set(
-          1 + Math.sin(Date.now() / 200) * 0.1,
-          1 + Math.sin(Date.now() / 200) * 0.1
-        );
-        requestAnimationFrame(animate);
+        // Pulse effect
+        const pulse = 1 + Math.sin(Date.now() / 200) * 0.1;
+        winTextRef.current.scale.set(pulse, pulse);
+
+        // Rainbow color cycling for win text
+        const hue = (Date.now() / 50) % 360;
+        winTextRef.current.tint = hslToHex(hue, 80, 60);
+
+        animationFrameRef.current = requestAnimationFrame(animate);
       };
 
-      const animationId = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
 
       return () => {
-        cancelAnimationFrame(animationId);
+        if (animationFrameRef.current !== null) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
         if (winTextRef.current) {
           winTextRef.current.scale.set(1, 1);
+          winTextRef.current.tint = 0xffdd00;
         }
       };
     }
-  }, [lastWin, isSpinning]);
+  }, [showWinAnimation, lastWin]);
 
   const drawBackground = useCallback((g: GraphicsType) => {
     g.clear();
@@ -85,7 +94,7 @@ const BalanceDisplay = ({
         style={amountStyle}
       />
 
-      {lastWin > 0 && !isSpinning && (
+      {lastWin > 0 && showWinAnimation && (
         <Container position={[0, 70]}>
           <Text
             ref={winTextRef}

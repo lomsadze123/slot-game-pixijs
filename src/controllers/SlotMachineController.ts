@@ -1,12 +1,8 @@
 export default class SlotMachineController {
   private state: SlotMachineState;
-  private symbolsPerReel: number[];
   private totalSymbols = 8; // Total different symbol types
 
   constructor(columns: number, rows: number) {
-    // Set up initial state
-    this.symbolsPerReel = Array(columns).fill(20); // Each reel has 20 possible symbol positions
-
     // Initialize positions (each position represents which symbol is shown)
     const reelPositions = Array(columns)
       .fill(0)
@@ -34,11 +30,9 @@ export default class SlotMachineController {
     if (this.state.isSpinning || this.state.balance < this.state.betAmount) {
       return Promise.reject("Cannot spin now");
     }
-
     // Deduct bet amount
     this.state.balance -= this.state.betAmount;
     this.state.isSpinning = true;
-
     // Reset winning positions
     this.state.winningPositions = [];
 
@@ -59,7 +53,6 @@ export default class SlotMachineController {
         this.state.balance += win;
         this.state.isSpinning = false;
         this.state.winningPositions = winningPositions;
-
         resolve({ win });
       }, 1000);
     });

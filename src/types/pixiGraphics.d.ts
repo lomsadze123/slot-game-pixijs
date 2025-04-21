@@ -21,6 +21,7 @@ interface BalanceDisplayProps extends Position {
   balance: number;
   lastWin: number;
   isSpinning: boolean;
+  showWinAnimation?: boolean;
 }
 
 interface SlotMachineProps extends Dimension {
