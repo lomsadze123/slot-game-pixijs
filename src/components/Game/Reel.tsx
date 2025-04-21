@@ -30,7 +30,6 @@ const Reel = ({
   const finalPositionsRef = useRef<number[] | null>(null);
 
   const spinSpeed = 15;
-  const spinSpeedRef = useRef(spinSpeed);
 
   const symbolHeight = height / symbolCount;
 
@@ -135,9 +134,6 @@ const Reel = ({
     }
 
     finalPositionsRef.current = targetSequence;
-
-    // Start the slowdown process
-    spinSpeedRef.current = spinSpeed;
   }, [targetPositions, symbolCount]);
 
   // Normal spinning animation - faster movement with dynamic easing
