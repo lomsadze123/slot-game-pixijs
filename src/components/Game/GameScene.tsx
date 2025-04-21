@@ -17,7 +17,7 @@ const GameScene = ({ width, height }: Size) => {
   });
   // Add a separate UI disabled state with a longer duration
   const [uiDisabled, setUiDisabled] = useState(false);
-  const reelAnimationTime = 3000;
+  const reelAnimationTime = 1450;
 
   // Get initial state from controller
   useEffect(() => {

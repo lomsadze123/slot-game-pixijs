@@ -24,15 +24,18 @@ const Reel = ({
   const spinningRef = useRef(false);
   const stoppingRef = useRef(false);
   const totalSpins = useRef(0);
-  const finalPositionsRef = useRef<number[] | null>(null);
   const reelHasWinningSymbolsRef = useRef(false);
+
+  // Store the target positions we need to transition to when stopping
+  const finalPositionsRef = useRef<number[] | null>(null);
+  const spinSpeed = 7;
+  const spinSpeedRef = useRef(spinSpeed);
 
   const symbolHeight = height / symbolCount;
 
   // Animation timing constants
   const startDelayPerReel = 150;
   const stopDelayPerReel = 300;
-  const spinSpeed = 7;
   const baseDuration = 1000 / spinSpeed; // Base duration for one symbol movement
 
   const hasWinningSymbols = winningPositions.length > 0;
@@ -107,37 +110,13 @@ const Reel = ({
     animationFrameRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // Normal spinning animation - constant speed
-  const spinOneSymbol = useCallback(() => {
-    if (!spinningRef.current) return;
-    totalSpins.current++;
+  // Calculate the remaining spins needed to align with target positions
+  const calculateRemainingSpins = useCallback(() => {
+    if (!targetPositions || !targetPositions.length) return 5; // Default if no target positions
 
-    const from = { y: 0 };
-    const to = { y: -symbolHeight };
-
-    new Tween(from)
-      .to(to, baseDuration)
-      .easing(Easing.Sinusoidal.InOut)
-      .onUpdate(() => setOffset(from.y))
-      .onComplete(() => {
-        // Reset position and cycle symbols
-        setOffset(0);
-        // (move first to end)
-        activeSymbolsRef.current = [
-          ...activeSymbolsRef.current.slice(1),
-          activeSymbolsRef.current[0],
-        ];
-
-        if (spinningRef.current) {
-          if (stoppingRef.current) {
-            beginStopSequence();
-          } else {
-            spinOneSymbol(); // Continue spinning
-          }
-        }
-      })
-      .start();
-  }, [baseDuration, symbolHeight]);
+    // Minimum number of spins needed is at least 3 plus the reel index to ensure visual effect of sequential stopping
+    return 3 + reelIndex;
+  }, [targetPositions, reelIndex]);
 
   // Prepare the reel to show the final positions when stopping
   const prepareStopPositions = useCallback(() => {
@@ -145,85 +124,105 @@ const Reel = ({
       // If no target positions, just continue with random results
       return;
     }
-    // Create a new array of symbols that will ensure the visible area shows targetPositions
-    const newSymbols = [...targetPositions];
-    // Add extra symbols at the end for smooth animation
-    // (we'll only care about the visible ones but need the extras for animation)
-    for (let i = 0; i < symbolCount; i++) {
-      newSymbols.push(Math.floor(Math.random() * 8));
-    }
-    finalPositionsRef.current = newSymbols;
-  }, [targetPositions, symbolCount]);
 
-  const beginStopSequence = useCallback(() => {
-    if (finalPositionsRef.current === null && targetPositions) {
-      prepareStopPositions();
+    // Create a sequence that will show the target symbols after remaining spins
+    const targetSequence = [...targetPositions];
+
+    // Add random symbols at the end for the "buffer zone"
+    for (let i = 0; i < symbolCount; i++) {
+      targetSequence.push(Math.floor(Math.random() * 8));
     }
-    const slowdownSpins = 4;
-    let currentSpin = 0;
-    const performSlowSpin = () => {
-      if (currentSpin >= slowdownSpins) {
-        // Final adjustment to ensure correct positions are shown
-        if (finalPositionsRef.current) {
-          activeSymbolsRef.current = [...finalPositionsRef.current];
-        }
-        // Final bounce and stop
-        new Tween({ y: -symbolHeight * 0.15 })
-          .to({ y: 0 }, 300)
-          .easing(Easing.Back.Out)
-          .onUpdate(({ y }) => setOffset(y))
-          .onComplete(() => {
-            spinningRef.current = false;
-            stoppingRef.current = false;
-            setOffset(0);
-            finalPositionsRef.current = null;
-          })
-          .start();
-        return;
-      }
-      // Calculate progressively longer duration
-      const slowdownFactor = 1.5 + currentSpin * 0.8;
-      const duration = baseDuration * slowdownFactor;
-      const from = { y: 0 };
-      const to = { y: -symbolHeight };
-      // If we're on the final spin before stopping, prepare to show the correct symbols
-      if (currentSpin === slowdownSpins - 1 && finalPositionsRef.current) {
-        // On the penultimate spin, set up the activeSymbols to properly transition to final position
-        const adjustedSymbols = [
-          ...finalPositionsRef.current.slice(1),
-          finalPositionsRef.current[0],
+
+    finalPositionsRef.current = targetSequence;
+
+    // Start the slowdown process
+    spinSpeedRef.current = spinSpeed;
+  }, [targetPositions, symbolCount, calculateRemainingSpins]);
+
+  // Normal spinning animation - constant speed
+  const spinOneSymbol = useCallback(() => {
+    if (!spinningRef.current) return;
+    totalSpins.current++;
+
+    // Gradually slow down if we're stopping
+    const duration = stoppingRef.current
+      ? baseDuration * (1 + (totalSpins.current % 5) * 0.5)
+      : baseDuration;
+
+    const from = { y: 0 };
+    const to = { y: -symbolHeight };
+
+    new Tween(from)
+      .to(to, duration)
+      .easing(Easing.Sinusoidal.InOut)
+      .onUpdate(() => setOffset(from.y))
+      .onComplete(() => {
+        // Reset position and cycle symbols
+        setOffset(0);
+
+        // Move first symbol to end
+        activeSymbolsRef.current = [
+          ...activeSymbolsRef.current.slice(1),
+          activeSymbolsRef.current[0],
         ];
-        activeSymbolsRef.current = adjustedSymbols;
-      }
-      new Tween(from)
-        .to(to, duration) // Progressively slower
-        .easing(Easing.Sinusoidal.InOut)
-        .onUpdate(() => setOffset(from.y))
-        .onComplete(() => {
-          setOffset(0);
-          activeSymbolsRef.current = [
-            ...activeSymbolsRef.current.slice(1),
-            activeSymbolsRef.current[0],
-          ];
-          currentSpin++;
-          performSlowSpin(); // Continue with next slower spin
-        })
-        .start();
-    };
-    // Start the slowdown sequence
-    performSlowSpin();
-  }, [symbolHeight, baseDuration, targetPositions, prepareStopPositions]);
+
+        // For the stopping sequence, gradually decrease speed
+        if (spinningRef.current) {
+          if (stoppingRef.current) {
+            // Check if we've reached the point where we need to show final positions
+            const remainingSpins =
+              calculateRemainingSpins() - totalSpins.current;
+
+            if (remainingSpins <= 0 && finalPositionsRef.current) {
+              performFinalStop();
+            } else {
+              spinOneSymbol();
+            }
+          } else {
+            spinOneSymbol(); // Continue spinning at normal speed
+          }
+        }
+      })
+      .start();
+  }, [baseDuration, symbolHeight, calculateRemainingSpins]);
+
+  // Execute the final stop with precise alignment
+  const performFinalStop = useCallback(() => {
+    if (!finalPositionsRef.current) return;
+
+    // Switch to the final target sequence
+    activeSymbolsRef.current = [...finalPositionsRef.current];
+
+    // Do a final bounce animation
+    const from = { y: -symbolHeight * 0.2 };
+    const to = { y: 0 };
+
+    new Tween(from)
+      .to(to, 400)
+      .easing(Easing.Back.Out)
+      .onUpdate(() => setOffset(from.y))
+      .onComplete(() => {
+        setOffset(0);
+        spinningRef.current = false;
+        stoppingRef.current = false;
+        finalPositionsRef.current = null;
+      })
+      .start();
+  }, [symbolHeight]);
 
   const startSpinning = useCallback(() => {
     if (spinningRef.current) return;
+
     spinningRef.current = true;
     stoppingRef.current = false;
     totalSpins.current = 0;
     finalPositionsRef.current = null;
+
     // Cancel any existing animations
     removeAll();
+
     setTimeout(() => {
-      // Initial bounce
+      // Initial bounce effect
       const bounce = { y: 0 };
       new Tween(bounce)
         .to({ y: -symbolHeight * 0.15 }, 100)
@@ -274,8 +273,8 @@ const Reel = ({
     stopDelayPerReel,
   ]);
 
-  const getVisibleSymbols = () => {
-    // We need symbolCount + 2 symbols to ensure smooth scrolling
+  const getVisibleSymbols = useCallback(() => {
+    // We need symbolCount + 2 symbols to ensure smooth scrolling (one extra above and below the visible area)
     const visibleSymbols = [];
     for (let i = 0; i < symbolCount + 2; i++) {
       visibleSymbols.push(
@@ -283,15 +282,18 @@ const Reel = ({
       );
     }
     return visibleSymbols;
-  };
+  }, [symbolCount]);
 
   // Determine if a symbol at specific position is part of a winning line
-  const isWinningPosition = (rowIndex: number) => {
-    if (!hasWinningSymbols) return false;
+  const isWinningPosition = useCallback(
+    (rowIndex: number) => {
+      if (!hasWinningSymbols) return false;
 
-    // Check if the row index is in our winning positions
-    return winningPositions.some(([_, row]) => row === rowIndex);
-  };
+      // Check if the row index is in our winning positions
+      return winningPositions.some(([_, row]) => row === rowIndex);
+    },
+    [hasWinningSymbols, winningPositions]
+  );
 
   const visibleSymbols = getVisibleSymbols();
 
