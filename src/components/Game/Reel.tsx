@@ -21,7 +21,6 @@ const Reel = ({
   const maskRef = useRef<GraphicsType>(null);
   const animationFrameRef = useRef<number | null>(null);
   const activeSymbolsRef = useRef<number[]>([...symbols]);
-  const initialSymbolsRef = useRef<number[]>([...symbols]);
   const spinningRef = useRef(false);
   const stoppingRef = useRef(false);
   const totalSpins = useRef(0);
@@ -29,15 +28,16 @@ const Reel = ({
 
   // Store the target positions we need to transition to when stopping
   const finalPositionsRef = useRef<number[] | null>(null);
-  const spinSpeed = 7;
+
+  const spinSpeed = 15;
   const spinSpeedRef = useRef(spinSpeed);
 
   const symbolHeight = height / symbolCount;
 
   // Animation timing constants
-  const startDelayPerReel = 150;
-  const stopDelayPerReel = 300;
-  const baseDuration = 500 / spinSpeed; // Base duration for one symbol movement
+  const startDelayPerReel = 120;
+  const stopDelayPerReel = 200;
+  const baseDuration = 700 / spinSpeed;
 
   const hasWinningSymbols = winningPositions.length > 0;
 
@@ -115,8 +115,8 @@ const Reel = ({
   const calculateRemainingSpins = useCallback(() => {
     if (!targetPositions || !targetPositions.length) return 5; // Default if no target positions
 
-    // Minimum number of spins needed is at least 3 plus the reel index to ensure visual effect of sequential stopping
-    return 3 + reelIndex;
+    // Maintain a minimum number of spins for visual effect
+    return 2 + reelIndex + Math.floor(Math.random() * 2); // Add slight randomness
   }, [targetPositions, reelIndex]);
 
   // Prepare the reel to show the final positions when stopping
@@ -126,59 +126,45 @@ const Reel = ({
       return;
     }
 
-    // Create a prediction of how the reel will look after remaining spins
-    const spinCount = calculateRemainingSpins();
-    const currentSymbols = [...activeSymbolsRef.current];
-
-    // Simulate the rotations that will happen during remaining spins
-    let simulatedSymbols = [...currentSymbols];
-    for (let i = 0; i < spinCount; i++) {
-      simulatedSymbols = [...simulatedSymbols.slice(1), simulatedSymbols[0]];
-    }
-
-    // Calculate the target positions to ensure smooth transition
+    // Create a sequence that will show the target symbols after remaining spins
     const targetSequence = [...targetPositions];
 
-    // We need to ensure the symbols that will be visible after spinning match the target positions we want to show
-    const finalSequence = [];
-
-    // First add some symbols above the visible area (these will be scrolled through)
+    // Add random symbols at the end for the "buffer zone"
     for (let i = 0; i < symbolCount; i++) {
-      finalSequence.push(simulatedSymbols[i]);
+      targetSequence.push(Math.floor(Math.random() * 8));
     }
 
-    // Then add our target positions for the visible area
-    for (let i = 0; i < symbolCount; i++) {
-      finalSequence.push(targetSequence[i]);
-    }
-
-    // Finally add some buffer symbols for smooth animation
-    for (let i = 0; i < symbolCount; i++) {
-      finalSequence.push(Math.floor(Math.random() * 8));
-    }
-
-    finalPositionsRef.current = finalSequence;
+    finalPositionsRef.current = targetSequence;
 
     // Start the slowdown process
     spinSpeedRef.current = spinSpeed;
-  }, [targetPositions, symbolCount, calculateRemainingSpins]);
+  }, [targetPositions, symbolCount]);
 
-  // Normal spinning animation - constant speed
+  // Normal spinning animation - faster movement with dynamic easing
   const spinOneSymbol = useCallback(() => {
     if (!spinningRef.current) return;
     totalSpins.current++;
 
-    // Gradually slow down if we're stopping
-    const duration = stoppingRef.current
-      ? baseDuration * (1 + (totalSpins.current % 5) * 0.5)
-      : baseDuration;
+    // Calculate dynamic duration - faster at start, gradual slowdown near end
+    let duration = baseDuration;
+
+    if (stoppingRef.current) {
+      // Create a more dramatic and visible slowdown effect
+      const slowdownFactor = Math.min(2.5, 1 + (totalSpins.current % 5) * 0.4);
+      duration *= slowdownFactor;
+    }
 
     const from = { y: 0 };
     const to = { y: -symbolHeight };
 
+    // Use a more dynamic easing function for faster spinning
+    const easingFunction = !stoppingRef.current
+      ? Easing.Quadratic.InOut // Faster during normal spinning
+      : Easing.Back.Out; // More dramatic when stopping
+
     new Tween(from)
       .to(to, duration)
-      .easing(Easing.Sinusoidal.InOut)
+      .easing(easingFunction)
       .onUpdate(() => setOffset(from.y))
       .onComplete(() => {
         // Reset position and cycle symbols
@@ -210,20 +196,20 @@ const Reel = ({
       .start();
   }, [baseDuration, symbolHeight, calculateRemainingSpins]);
 
-  // Execute the final stop with precise alignment
+  // Execute the final stop with precise alignment and more bounce
   const performFinalStop = useCallback(() => {
     if (!finalPositionsRef.current) return;
 
     // Switch to the final target sequence
     activeSymbolsRef.current = [...finalPositionsRef.current];
 
-    // Do a final bounce animation to simulate slight overshooting and bouncing back
-    const from = { y: -symbolHeight * 0.2 };
+    // Enhanced bounce effect when stopping
+    const from = { y: -symbolHeight * 0.3 }; // Increased bounce height
     const to = { y: 0 };
 
     new Tween(from)
-      .to(to, 400)
-      .easing(Easing.Back.Out)
+      .to(to, 300)
+      .easing(Easing.Elastic.Out)
       .onUpdate(() => setOffset(from.y))
       .onComplete(() => {
         setOffset(0);
@@ -245,21 +231,43 @@ const Reel = ({
     // Cancel any existing animations
     removeAll();
 
-    // Store current symbols as initial before animation starts
-    initialSymbolsRef.current = [...activeSymbolsRef.current];
-
     setTimeout(() => {
-      // Initial bounce effect - this creates the anticipation effect
       const bounce = { y: 0 };
+
+      // First small anticipation pull up movement
       new Tween(bounce)
-        .to({ y: -symbolHeight * 0.15 }, 100)
-        .easing(Easing.Quadratic.Out)
-        .yoyo(true)
-        .repeat(1)
+        .to({ y: symbolHeight * 0.05 }, 120)
+        .easing(Easing.Sinusoidal.InOut)
         .onUpdate(() => setOffset(bounce.y))
         .onComplete(() => {
-          // Start actual spinning immediately after this reel's bounce
-          spinOneSymbol();
+          // Second stronger downward movement
+          new Tween(bounce)
+            .to({ y: -symbolHeight * 0.25 }, 160)
+            .easing(Easing.Quadratic.Out)
+            .onUpdate(() => setOffset(bounce.y))
+            .onComplete(() => {
+              // Small bounce back up
+              new Tween(bounce)
+                .to({ y: -symbolHeight * 0.1 }, 90)
+                .easing(Easing.Sinusoidal.In)
+                .onUpdate(() => setOffset(bounce.y))
+                .onComplete(() => {
+                  // Final settling movement
+                  new Tween(bounce)
+                    .to({ y: 0 }, 70)
+                    .easing(Easing.Back.Out)
+                    .onUpdate(() => setOffset(bounce.y))
+                    .onComplete(() => {
+                      // Start actual spinning with a tiny delay
+                      setTimeout(() => {
+                        spinOneSymbol();
+                      }, 30);
+                    })
+                    .start();
+                })
+                .start();
+            })
+            .start();
         })
         .start();
     }, reelIndex * startDelayPerReel);

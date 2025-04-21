@@ -54,7 +54,7 @@ export default class SlotMachineController {
         this.state.isSpinning = false;
         this.state.winningPositions = winningPositions;
         resolve({ win });
-      }, 1000);
+      }, 800);
     });
   }
 
