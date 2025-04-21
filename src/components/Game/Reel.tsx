@@ -21,6 +21,7 @@ const Reel = ({
   const maskRef = useRef<GraphicsType>(null);
   const animationFrameRef = useRef<number | null>(null);
   const activeSymbolsRef = useRef<number[]>([...symbols]);
+  const initialSymbolsRef = useRef<number[]>([...symbols]);
   const spinningRef = useRef(false);
   const stoppingRef = useRef(false);
   const totalSpins = useRef(0);
@@ -36,7 +37,7 @@ const Reel = ({
   // Animation timing constants
   const startDelayPerReel = 150;
   const stopDelayPerReel = 300;
-  const baseDuration = 1000 / spinSpeed; // Base duration for one symbol movement
+  const baseDuration = 500 / spinSpeed; // Base duration for one symbol movement
 
   const hasWinningSymbols = winningPositions.length > 0;
 
@@ -125,15 +126,38 @@ const Reel = ({
       return;
     }
 
-    // Create a sequence that will show the target symbols after remaining spins
-    const targetSequence = [...targetPositions];
+    // Create a prediction of how the reel will look after remaining spins
+    const spinCount = calculateRemainingSpins();
+    const currentSymbols = [...activeSymbolsRef.current];
 
-    // Add random symbols at the end for the "buffer zone"
-    for (let i = 0; i < symbolCount; i++) {
-      targetSequence.push(Math.floor(Math.random() * 8));
+    // Simulate the rotations that will happen during remaining spins
+    let simulatedSymbols = [...currentSymbols];
+    for (let i = 0; i < spinCount; i++) {
+      simulatedSymbols = [...simulatedSymbols.slice(1), simulatedSymbols[0]];
     }
 
-    finalPositionsRef.current = targetSequence;
+    // Calculate the target positions to ensure smooth transition
+    const targetSequence = [...targetPositions];
+
+    // We need to ensure the symbols that will be visible after spinning match the target positions we want to show
+    const finalSequence = [];
+
+    // First add some symbols above the visible area (these will be scrolled through)
+    for (let i = 0; i < symbolCount; i++) {
+      finalSequence.push(simulatedSymbols[i]);
+    }
+
+    // Then add our target positions for the visible area
+    for (let i = 0; i < symbolCount; i++) {
+      finalSequence.push(targetSequence[i]);
+    }
+
+    // Finally add some buffer symbols for smooth animation
+    for (let i = 0; i < symbolCount; i++) {
+      finalSequence.push(Math.floor(Math.random() * 8));
+    }
+
+    finalPositionsRef.current = finalSequence;
 
     // Start the slowdown process
     spinSpeedRef.current = spinSpeed;
@@ -193,7 +217,7 @@ const Reel = ({
     // Switch to the final target sequence
     activeSymbolsRef.current = [...finalPositionsRef.current];
 
-    // Do a final bounce animation
+    // Do a final bounce animation to simulate slight overshooting and bouncing back
     const from = { y: -symbolHeight * 0.2 };
     const to = { y: 0 };
 
@@ -221,8 +245,11 @@ const Reel = ({
     // Cancel any existing animations
     removeAll();
 
+    // Store current symbols as initial before animation starts
+    initialSymbolsRef.current = [...activeSymbolsRef.current];
+
     setTimeout(() => {
-      // Initial bounce effect
+      // Initial bounce effect - this creates the anticipation effect
       const bounce = { y: 0 };
       new Tween(bounce)
         .to({ y: -symbolHeight * 0.15 }, 100)
