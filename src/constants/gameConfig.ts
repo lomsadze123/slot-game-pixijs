@@ -22,3 +22,19 @@ export const BG_ASSETS = SYMBOL_ASSETS.map((path) => {
   // Create the background path
   return `images/symbol_bgs/${nameWithoutExt}_bg.png`;
 });
+
+export const GAME_CONFIG = {
+  columns: 5,
+  rows: 3,
+  minBet: 10,
+  betAmount: 20,
+  betStep: 10,
+  startingBalance: 1000,
+  symbolCount: 8,
+  spinDuration: 1000,
+  stopDelay: 150,
+  symbolsPerReel: 20,
+  stopDelayPerReel: 200,
+  startDelayPerReel: 120,
+  reelAnimationTime: 1000,
+};

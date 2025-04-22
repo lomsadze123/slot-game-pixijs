@@ -1,7 +1,7 @@
 import { Container, Sprite } from "@pixi/react";
 import { useEffect, useState, useRef } from "react";
 import { Assets, Container as ContaineType } from "pixi.js";
-import { BG_ASSETS, SYMBOL_ASSETS } from "../../constants/pixiAssets";
+import { BG_ASSETS, SYMBOL_ASSETS } from "../../constants/gameConfig";
 
 const Symbol = ({
   x,

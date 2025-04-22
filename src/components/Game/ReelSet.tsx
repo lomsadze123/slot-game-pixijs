@@ -1,6 +1,11 @@
 import { Container } from "@pixi/react";
-import { useCallback, useRef, useEffect } from "react";
+import { useRef } from "react";
 import Reel from "./Reel";
+import { useSpinState } from "../../hooks/useSpinState";
+import {
+  generateInitialReelSymbols,
+  getReelWinningPositions,
+} from "../../utils/symbolUtils";
 
 const ReelSet = ({
   x,
@@ -13,47 +18,26 @@ const ReelSet = ({
   reelPositions,
   winningPositions = [],
 }: ReelGrid) => {
-  const spinningRef = useRef(isSpinning);
-  const isStoppingRef = useRef(false);
+  // Track spinning state transitions
+  useSpinState(isSpinning);
 
-  const generateRandomSymbols = useCallback((count: number) => {
-    return Array.from({ length: count * 3 }, () =>
-      Math.floor(Math.random() * 7)
-    );
-  }, []);
-
-  // Reset stopping counter when spinning starts or stops
-  useEffect(() => {
-    if (isSpinning && !spinningRef.current) {
-      isStoppingRef.current = false;
-    }
-
-    if (!isSpinning && spinningRef.current) {
-      isStoppingRef.current = true;
-    }
-
-    spinningRef.current = isSpinning;
-  }, [isSpinning]);
-
-  const initialReelSymbols = useRef(
-    Array(columns)
-      .fill(null)
-      .map(() => generateRandomSymbols(rows + 2))
-  );
+  // Initialize reel symbols
+  const initialReelSymbols = useRef(generateInitialReelSymbols(columns, rows));
 
   return (
     <Container position={[x, y]}>
       {Array(columns)
         .fill(0)
         .map((_, columnIndex) => {
-          // Get the target symbols for this reel - these are what must be shown in the visible area of the reel after it stops spinning
+          // Get the target symbols for this reel
           const targetPositions = reelPositions
             ? reelPositions[columnIndex]
             : undefined;
 
           // Find winning positions in this reel
-          const reelWinningPositions = winningPositions.filter(
-            ([colIndex]) => colIndex === columnIndex
+          const reelWinningPositions = getReelWinningPositions(
+            columnIndex,
+            winningPositions
           );
 
           return (

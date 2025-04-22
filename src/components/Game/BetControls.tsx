@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from "@pixi/react";
 import { TextStyle, Graphics as GraphicsType } from "pixi.js";
 import { useCallback } from "react";
+import { GAME_CONFIG } from "../../constants/gameConfig";
 
 const BetControls = ({
   x,
@@ -21,13 +22,21 @@ const BetControls = ({
     (g: GraphicsType, isPlus: boolean) => {
       g.clear();
 
-      const width = 45;
-      const height = 45;
-      const radius = 6;
+      const buttonDimensions = {
+        width: 45,
+        height: 45,
+        radius: 6,
+      };
 
       g.beginFill(disabled ? 0x333355 : 0x2a2a4a);
       g.lineStyle(2, 0x6c63ff, 0.1);
-      g.drawRoundedRect(-width / 2, -height / 2, width, height, radius);
+      g.drawRoundedRect(
+        -buttonDimensions.width / 2,
+        -buttonDimensions.height / 2,
+        buttonDimensions.width,
+        buttonDimensions.height,
+        buttonDimensions.radius
+      );
       g.endFill();
 
       // Draw '+' or '-' symbol
@@ -45,13 +54,13 @@ const BetControls = ({
 
   const handleIncreaseBet = useCallback(() => {
     if (!disabled) {
-      onChangeBet(betAmount + 10);
+      onChangeBet(betAmount + GAME_CONFIG.betStep);
     }
   }, [betAmount, onChangeBet, disabled]);
 
   const handleDecreaseBet = useCallback(() => {
-    if (!disabled && betAmount > 10) {
-      onChangeBet(betAmount - 10);
+    if (!disabled && betAmount > GAME_CONFIG.minBet) {
+      onChangeBet(betAmount - GAME_CONFIG.betStep);
     }
   }, [betAmount, onChangeBet, disabled]);
 
